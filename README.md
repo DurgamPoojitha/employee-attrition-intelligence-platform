@@ -104,46 +104,52 @@ graph TD
 .
 ├── Enterprise_Attrition_Intelligence_Platform_UPGRADED.ipynb # Core analytical pipeline & models
 ├── HR-Employee-Attrition-All.csv                             # Raw dataset (fallback)
-├── analyze_nb.py                                             # Utility script for notebook parsing
-├── generate_enterprise_notebook.py                           # Utility to generate analytical assets
+├── train.py                                                  # Production training script with MLflow tracking
+├── app.py                                                    # FastAPI endpoint serving inference, costs, & retention plans
+├── Dockerfile                                                # Packages FastAPI api service
+├── docker-compose.yml                                        # Orchestrates FastAPI api and MLflow UI
 ├── requirements.txt                                          # Python dependencies
 └── README.md                                                 # Executive project documentation
 ```
 
 ## 🏆 Key Technical Achievements
-* **Built an end-to-end Machine Learning pipeline** utilizing advanced ensemble methods (XGBoost, LightGBM) to predict attrition.
+* **Built an end-to-end Machine Learning pipeline** utilizing advanced ensemble methods (XGBoost) to predict attrition.
+* **Designed and deployed a FastAPI prediction endpoint** that yields flight risk probabilities, replacement costs, and personalized retention actions in real time.
+* **Integrated a dedicated model registry and experiment tracking server using MLflow**, persisting parameters, validation scores, and registered models into a SQLite backend store.
+* **Orchestrated containerized microservices using Docker and Docker Compose**, isolating the FastAPI inference engine and the MLflow dashboard for single-command local deployments.
 * **Designed an automated KPI computation framework** that assigns financial risk ($) to employee turnover.
-* **Implemented advanced class imbalance handling** (SMOTETomek) leading to a high-recall model to catch flight risks.
+* **Implemented advanced class imbalance handling** (SMOTE) leading to a high-recall model to catch flight risks.
 * **Developed executive-level interactive dashboards** using Plotly for stakeholder reporting.
-* **Integrated Explainable AI (SHAP)** to provide granular, employee-specific reasons for attrition risk, moving from "black-box" models to actionable business intelligence.
 
 ## 🚀 Production Readiness Assessment
-- **Current State:** Research-grade with enterprise architecture design. Solid error handling and logging.
-- **Risks:** Monolithic notebook structure limits CI/CD deployment.
-- **Missing Components:** Dedicated model registry (MLflow), API layer (FastAPI), and containerization (Docker).
-- **Enterprise Recommendations:**
+- **Current State:** Enterprise-grade production microservice. Features automated logging, data validation gates, containerization, and a registered model tracking database.
+- **Completed Components:**
+  - **Model Registry:** Integrated MLflow locally, logging runs and registering model versions.
+  - **API Layer:** Implemented FastAPI serving predictions, costs, and custom retention plans.
+  - **Containerization:** Written Dockerfile and docker-compose.yml orchestrating both services.
+- **Future Enterprise Recommendations:**
   - **Incremental Loading:** Shift from full batch to delta loads.
   - **Scheduling:** Orchestrate pipeline using Apache Airflow.
-  - **CI/CD & Docker:** Containerize the training pipeline and deploy the inference endpoint via Kubernetes.
+  - **CI/CD & Cloud:** Set up GitHub Actions CI/CD to deploy containers to AWS ECS/EKS or Google Cloud Run.
 
 ## 💼 Resume & Career Impact
 
 ### Resume Bullet Points
-- *Architected an Employee Attrition Intelligence Platform using XGBoost and LightGBM, identifying flight risks and projected turnover costs, potentially saving the enterprise $2M+ annually.*
+- *Architected and deployed a containerized Employee Attrition Intelligence API using FastAPI and Docker, serving real-time flight risk predictions, replacement costs, and targeted retention plans.*
+- *Implemented automated model registry and tracking using MLflow, logging validation metrics, hyperparameters, and model versions into a persistent SQLite database.*
 - *Developed a robust ETL pipeline in Python (Pandas, NumPy) with automated schema validation and exception handling.*
 - *Integrated Explainable AI (SHAP) to translate complex ML predictions into actionable retention strategies for HR executives.*
 - *Visualized workforce risk heatmaps and KPIs using interactive Plotly dashboards for C-suite stakeholders.*
 
 ### LinkedIn Project Description
-"I recently built an Enterprise Workforce Intelligence Platform! 🚀 Instead of just reporting on who left the company, this ML-powered system predicts *who will leave next* and *why*. By combining XGBoost with SHAP, I created an explainable AI pipeline that allows HR teams to proactively retain top talent and minimize replacement costs. #DataScience #MachineLearning #HRAnalytics #Python #AI"
+"I recently upgraded my Enterprise Workforce Intelligence Platform! 🚀 I transitioned the project from a Jupyter Notebook to a containerized production microservice. The system now features a real-time FastAPI endpoint that outputs flight risk percentages, financial replacement costs, and customized retention recommendations. It also logs hyperparameter experiments and registers models automatically using MLflow, orchestrated easily using Docker Compose! #MachineLearning #MLOps #FastAPI #Docker #MLflow #Python"
 
 ### Interview Talking Points (STAR Method)
 - **Situation:** HR teams rely on reactive reporting after employees leave, which is costly and inefficient.
-- **Task:** Build a predictive ML model to flag employees at risk of leaving and provide actionable insights to retain them.
-- **Action:** I developed an end-to-end Python pipeline. I cleaned the data, handled severe class imbalance using SMOTE, trained ensemble models (XGBoost/LightGBM), and used SHAP to explain the models' decisions.
-- **Result:** The platform accurately predicts attrition, calculates the associated financial risk, and outputs personalized retention recommendations, turning data into direct business value.
+- **Task:** Build a predictive ML model to flag employees at risk of leaving, estimate associated replacement costs, and deploy it as a production-grade microservice.
+- **Action:** I developed a Python training pipeline with MLflow tracking, built a REST API in FastAPI, and containerized the architecture using Docker and Docker Compose.
+- **Result:** The system can now be deployed in one command, provides real-time inference with detailed financial and action-plan responses, and logs all experiments to a model registry, bridging data science with standard MLOps practices.
 
 ### GitHub Optimization
-- **Badges:** Add Python, XGBoost, and Jupyter badges.
+- **Badges:** Add Python, XGBoost, FastAPI, Docker, and MLflow badges.
 - **Media:** Highly recommend adding a GIF of the Plotly interactive dashboards right at the top of this README.
-- **File Structure:** Consider moving all notebooks into a `notebooks/` directory and creating a `src/` directory for Python modules to make it more production-ready.
