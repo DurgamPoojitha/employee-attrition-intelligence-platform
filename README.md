@@ -1,4 +1,16 @@
 # 🚀 Enterprise Workforce Intelligence & Attrition Risk Platform
+# Employee Attrition Intelligence Platform
+
+![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
+![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-green?logo=pandas)
+![NumPy](https://img.shields.io/badge/NumPy-Numerical%20Computing-blue?logo=numpy)
+![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-orange?logo=jupyter)
+![ETL](https://img.shields.io/badge/Data%20Engineering-ETL-success)
+![BI](https://img.shields.io/badge/Business%20Intelligence-Dashboard-purple)
+![HR Analytics](https://img.shields.io/badge/Domain-HR%20Analytics-blueviolet)
+![Status](https://img.shields.io/badge/Status-Enterprise%20Ready-brightgreen)
+
+Enterprise-grade HR analytics platform for employee attrition analysis, workforce intelligence, KPI tracking, predictive insights, and executive reporting.
 
 ## 📑 Executive Summary
 **Business Problem:** Employee turnover is a silent profit killer. High-performing employees leaving the organization result in direct replacement costs (recruiting, onboarding) and indirect costs (lost productivity, institutional knowledge drain).
