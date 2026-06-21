@@ -144,25 +144,5 @@ graph TD
   - **Scheduling:** Orchestrate pipeline using Apache Airflow.
   - **CI/CD & Cloud:** Set up GitHub Actions CI/CD to deploy containers to AWS ECS/EKS or Google Cloud Run.
 
-## 💼 Resume & Career Impact
 
-### Resume Bullet Points
-- *Architected and deployed a containerized Employee Attrition Intelligence API using FastAPI and Docker, serving real-time flight risk predictions, replacement costs, and targeted retention plans.*
-- *Implemented automated model registry and tracking using MLflow, logging validation metrics, hyperparameters, and model versions into a persistent SQLite database.*
-- *Developed a robust ETL pipeline in Python (Pandas, NumPy) with automated schema validation and exception handling.*
-- *Integrated Explainable AI (SHAP) to translate complex ML predictions into actionable retention strategies for HR executives.*
-- *Visualized workforce risk heatmaps and KPIs using interactive Plotly dashboards for C-suite stakeholders.*
-
-### LinkedIn Project Description
-"I recently upgraded my Enterprise Workforce Intelligence Platform! 🚀 I transitioned the project from a Jupyter Notebook to a containerized production microservice. The system now features a real-time FastAPI endpoint that outputs flight risk percentages, financial replacement costs, and customized retention recommendations. It also logs hyperparameter experiments and registers models automatically using MLflow, orchestrated easily using Docker Compose! #MachineLearning #MLOps #FastAPI #Docker #MLflow #Python"
-
-### Interview Talking Points (STAR Method)
-- **Situation:** HR teams rely on reactive reporting after employees leave, which is costly and inefficient.
-- **Task:** Build a predictive ML model to flag employees at risk of leaving, estimate associated replacement costs, and deploy it as a production-grade microservice.
-- **Action:** I developed a Python training pipeline with MLflow tracking, built a REST API in FastAPI, and containerized the architecture using Docker and Docker Compose.
-- **Result:** The system can now be deployed in one command, provides real-time inference with detailed financial and action-plan responses, and logs all experiments to a model registry, bridging data science with standard MLOps practices.
-
-### GitHub Optimization
-- **Badges:** Add Python, XGBoost, FastAPI, Docker, and MLflow badges.
-- **Media:** Highly recommend adding a GIF of the Plotly interactive dashboards right at the top of this README.
 
