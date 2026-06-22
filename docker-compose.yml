@@ -18,3 +18,15 @@ services:
     volumes:
       - ./mlruns:/app/mlruns
     command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///app/mlruns/mlflow.db --default-artifact-root file:///app/mlruns
+
+  streamlit:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+    depends_on:
+      - api
+    command: streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    environment:
+      - API_URL=http://api:8000

@@ -1,16 +1,15 @@
 # 🚀 Enterprise Workforce Intelligence & Attrition Risk Platform
-# Employee Attrition Intelligence Platform
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
-![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-green?logo=pandas)
-![NumPy](https://img.shields.io/badge/NumPy-Numerical%20Computing-blue?logo=numpy)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-orange?logo=jupyter)
-![ETL](https://img.shields.io/badge/Data%20Engineering-ETL-success)
-![BI](https://img.shields.io/badge/Business%20Intelligence-Dashboard-purple)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi)
+![MLflow](https://img.shields.io/badge/MLflow-Registry-0194E2?logo=mlflow)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker)
+![XGBoost](https://img.shields.io/badge/XGBoost-ML%20Engine-orange)
 ![HR Analytics](https://img.shields.io/badge/Domain-HR%20Analytics-blueviolet)
 ![Status](https://img.shields.io/badge/Status-Enterprise%20Ready-brightgreen)
 
-Enterprise-grade HR analytics platform for employee attrition analysis, workforce intelligence, KPI tracking, predictive insights, and executive reporting.
+Enterprise-grade HR analytics platform with a **Streamlit interactive dashboard**, **FastAPI inference engine**, **MLflow model registry**, and **Docker orchestration** — from raw data to real-time executive retention intelligence.
 
 ## 📑 Executive Summary
 **Business Problem:** Employee turnover is a silent profit killer. High-performing employees leaving the organization result in direct replacement costs (recruiting, onboarding) and indirect costs (lost productivity, institutional knowledge drain).
@@ -26,13 +25,30 @@ The platform is designed with an enterprise-grade modular architecture, ensuring
 
 ```mermaid
 graph TD
-    A[Raw Data Layer] -->|Ingestion & Validation| B(Processing Layer)
-    B -->|Feature Engineering| C{Machine Learning Layer}
+    A[Raw Data Layer] -->|Ingestion & Schema Validation| B(Processing Layer)
+    B -->|Feature Engineering + SMOTE| C{XGBoost ML Model}
     B -->|KPI Computation| D[Analytics Layer]
-    C -->|SHAP Values & Predictions| E[Risk & Recommendation Engine]
-    D --> F[Visualization Layer]
-    E --> F
-    F -->|Plotly / Dashboards| G((Executive Deliverables))
+    C -->|Flight Risk Proba| E[FastAPI Inference Engine]
+    D --> E
+    E -->|JSON Response| F[Streamlit Web Dashboard]
+    F -->|Plotly Charts + Retention Cards| G((HR Manager / CHRO))
+    C -->|Params + Metrics + Model| H[(MLflow Registry)]
+```
+
+**Quick Start:**
+```bash
+# 1. Train the model
+source venv/bin/activate
+python3 train.py
+
+# 2. Start FastAPI backend
+uvicorn app:app --host 127.0.0.1 --port 8000
+
+# 3. Launch Streamlit dashboard (new terminal)
+streamlit run streamlit_app.py
+
+# OR: Run everything with Docker (once Docker is installed)
+docker compose up --build
 ```
 **Layers:**
 - **Raw Data Layer:** Ingestion of HR systems data (CSV/DB), automated schema validation, and missing value checks.
@@ -107,8 +123,11 @@ graph TD
 | **Machine Learning** | Scikit-Learn, XGBoost, LightGBM, CatBoost |
 | **Interpretability** | SHAP (Explainable AI) |
 | **Visualization** | Plotly, Matplotlib, Seaborn |
-| **Imbalance Handling**| Imbalanced-Learn (SMOTE, SMOTETomek) |
-| **Notebooks** | Jupyter |
+| **Imbalance Handling** | Imbalanced-Learn (SMOTE) |
+| **Web Dashboard** | Streamlit |
+| **Inference API** | FastAPI + Uvicorn |
+| **Model Registry** | MLflow (SQLite backend) |
+| **Containerization** | Docker + Docker Compose |
 | **Version Control** | Git |
 
 ## 📁 Repository Structure
@@ -117,9 +136,12 @@ graph TD
 ├── Enterprise_Attrition_Intelligence_Platform_UPGRADED.ipynb # Core analytical pipeline & models
 ├── HR-Employee-Attrition-All.csv                             # Raw dataset (fallback)
 ├── train.py                                                  # Production training script with MLflow tracking
-├── app.py                                                    # FastAPI endpoint serving inference, costs, & retention plans
-├── Dockerfile                                                # Packages FastAPI api service
-├── docker-compose.yml                                        # Orchestrates FastAPI api and MLflow UI
+├── app.py                                                    # FastAPI endpoint: predict, cost breakdown, retention plan
+├── streamlit_app.py                                          # Interactive Streamlit web dashboard
+├── Dockerfile                                                # Container image: API + Streamlit
+├── docker-compose.yml                                        # Orchestrates API (8000) + MLflow (5000) + Streamlit (8501)
+├── models/                                                   # Saved model artifacts (joblib + schema JSON)
+├── mlruns/                                                   # MLflow SQLite tracking store
 ├── requirements.txt                                          # Python dependencies
 └── README.md                                                 # Executive project documentation
 ```
