@@ -29,7 +29,7 @@ def load_image_b64(path):
             return base64.b64encode(f.read()).decode()
     return ""
 
-ASSETS_DIR = "/Users/poojithadurgam/Documents/Data analysis/assets"
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 IMG_BANNERS = {
     "exec": load_image_b64(f"{ASSETS_DIR}/executive_overview.png"),
     "intel": load_image_b64(f"{ASSETS_DIR}/workforce_intelligence.png"),
