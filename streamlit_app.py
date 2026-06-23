@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+import joblib
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -7,6 +7,7 @@ import numpy as np
 import json
 import base64
 import os
+from typing import Dict, Any, List
 from datetime import datetime
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -348,7 +349,112 @@ div[role="radiogroup"] > label[data-checked="true"]{
 # ══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS & CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
-API_URL = "http://127.0.0.1:8000"
+# INLINE ML INFERENCE  (no FastAPI server required)
+# ══════════════════════════════════════════════════════════════════════════════
+MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+
+@st.cache_resource(show_spinner="Loading AI model…")
+def load_ml_artifacts():
+    """Load and cache the XGBoost model, scaler, and feature schema once."""
+    model_path  = os.path.join(MODELS_DIR, "attrition_best_model.joblib")
+    scaler_path = os.path.join(MODELS_DIR, "feature_scaler.joblib")
+    schema_path = os.path.join(MODELS_DIR, "feature_schema.json")
+    if not (os.path.exists(model_path) and os.path.exists(scaler_path) and os.path.exists(schema_path)):
+        return None, None, None
+    _model  = joblib.load(model_path)
+    _scaler = joblib.load(scaler_path)
+    with open(schema_path, "r") as f:
+        _schema = json.load(f)
+    return _model, _scaler, _schema
+
+ML_MODEL, ML_SCALER, ML_SCHEMA = load_ml_artifacts()
+
+def compute_retention_plan(features: Dict[str, Any], risk_score: float) -> List[Dict[str, str]]:
+    recs = []
+    overtime   = str(features.get("OverTime", "No")).lower() == "yes"
+    promo_gap  = features.get("YearsSinceLastPromotion", 0)
+    comp_ratio = features.get("MonthlyIncome", 5000) / (features.get("JobLevel", 2) * 1000)
+    job_sat    = features.get("JobSatisfaction", 3)
+    env_sat    = features.get("EnvironmentSatisfaction", 3)
+    rel_sat    = features.get("RelationshipSatisfaction", 3)
+    wlb        = features.get("WorkLifeBalance", 3)
+    eng_index  = np.mean([(job_sat-1)/3, (env_sat-1)/3, (rel_sat-1)/3, (wlb-1)/3])
+    if overtime:
+        recs.append({"Action":"Workload Redistribution","Detail":"Overtime cap + 1.5x comp-time. Review task allocation now.","Priority":"HIGH","Impact":"+12% retention probability"})
+    if promo_gap >= 3:
+        recs.append({"Action":"Promotion Review","Detail":f"{promo_gap:.0f} years without promotion. Initiate career path conversation.","Priority":"HIGH","Impact":"+10% retention probability"})
+    if comp_ratio < 1.0:
+        recs.append({"Action":"Compensation Assessment","Detail":f"Income ratio is {comp_ratio:.2f} (below peer median). Benchmark salary against target range.","Priority":"HIGH","Impact":"+15% retention probability"})
+    if eng_index < 0.45:
+        recs.append({"Action":"Engagement Programme","Detail":"Low satisfaction composite. Assign peer buddy + professional development budget.","Priority":"MEDIUM","Impact":"+8% retention probability"})
+    if features.get("BusinessTravel") == "Travel_Frequently":
+        recs.append({"Action":"Travel Policy Review","Detail":"Frequent business travel. Evaluate remote-first options to lower burnout.","Priority":"MEDIUM","Impact":"+6% retention probability"})
+    if features.get("YearsAtCompany", 5) <= 2:
+        recs.append({"Action":"Early Tenure Buddy Programme","Detail":"Structured onboarding + peer buddy for employees in first 2 years.","Priority":"MEDIUM","Impact":"+7% retention probability"})
+    if not recs:
+        recs.append({"Action":"Routine Check-in","Detail":"Low current risk. Maintain via standard 1-on-1 career pathing.","Priority":"LOW","Impact":"Maintain current retention"})
+    return recs
+
+def compute_replacement_cost(monthly_income: int, job_level: int, years_at_company: int) -> Dict[str, float]:
+    annual       = monthly_income * 12
+    recruit_pct  = 0.20 if job_level <= 2 else (0.35 if job_level <= 3 else 0.50)
+    recruitment  = annual * recruit_pct
+    training     = annual * 0.10
+    ramp_months  = min(3 + job_level, 6)
+    productivity = monthly_income * ramp_months * 0.50
+    knowledge    = annual * min(years_at_company * 0.02, 0.20)
+    total        = recruitment + training + productivity + knowledge
+    return {"RecruitmentCost":round(recruitment,2),"TrainingCost":round(training,2),
+            "ProductivityLoss":round(productivity,2),"KnowledgeDrainCost":round(knowledge,2),
+            "TotalReplacementCost":round(total,2)}
+
+def local_predict(payload: Dict[str, Any]):
+    """Run the full ML pipeline locally — no server needed."""
+    if ML_MODEL is None or ML_SCALER is None or ML_SCHEMA is None:
+        return None
+    df_raw = pd.DataFrame([payload])
+    df_fe  = df_raw.copy()
+    # Feature engineering (mirrors app.py /predict)
+    df_fe["Promotion_Gap"]    = df_fe["YearsSinceLastPromotion"] / (df_fe["TotalWorkingYears"] + 1)
+    df_fe["Compensation_Ratio"] = df_fe["MonthlyIncome"] / (df_fe["JobLevel"] * 1000)
+    SAT_COLS = ["JobSatisfaction","EnvironmentSatisfaction","RelationshipSatisfaction","WorkLifeBalance"]
+    for col in SAT_COLS:
+        df_fe[col + "_norm"] = (df_fe[col] - 1) / 3
+    df_fe["Engagement_Index"] = df_fe[[c + "_norm" for c in SAT_COLS]].mean(axis=1)
+    df_fe.drop(columns=[c + "_norm" for c in SAT_COLS], inplace=True)
+    travel_map = {"Non-Travel":0,"Travel_Rarely":1,"Travel_Frequently":2}
+    df_fe["Travel_Score"] = df_fe["BusinessTravel"].map(travel_map)
+    ot_num = (df_fe["OverTime"] == "Yes").astype(int)
+    df_fe["Burnout_Score"] = (0.4*ot_num + 0.3*(df_fe["YearsInCurrentRole"]/(df_fe["YearsInCurrentRole"].max()+1e-9)) + 0.3*(df_fe["Travel_Score"]/2))
+    df_fe.drop(columns=["Attrition_Num","Education_Label","Age_Band","Travel_Score",
+                        "Tenure_Group","Flight_Risk_Score","JobSatisfaction",
+                        "EnvironmentSatisfaction","RelationshipSatisfaction",
+                        "WorkLifeBalance","EmployeeCount","StandardHours",
+                        "Over18","EmployeeNumber"], errors="ignore", inplace=True)
+    df_fe["Gender"]   = df_fe["Gender"].map({"Female":0,"Male":1}).fillna(1).astype(int)
+    df_fe["OverTime"] = df_fe["OverTime"].map({"No":0,"Yes":1}).fillna(0).astype(int)
+    cat_cols  = ML_SCHEMA["cat_cols"]
+    df_model  = pd.get_dummies(df_fe, columns=cat_cols, drop_first=True)
+    df_model  = df_model.reindex(columns=ML_SCHEMA["features"], fill_value=0)
+    X_sc      = ML_SCALER.transform(df_model)
+    risk_pct  = round(float(ML_MODEL.predict_proba(X_sc)[0][1]) * 100, 2)
+    risk_cat  = ("Critical Risk" if risk_pct >= 75 else
+                 "High Risk"     if risk_pct >= 45 else
+                 "Medium Risk"   if risk_pct >= 25 else "Low Risk")
+    plan  = compute_retention_plan(payload, risk_pct)
+    costs = compute_replacement_cost(payload["MonthlyIncome"], payload["JobLevel"], payload["YearsAtCompany"])
+    return {
+        "FlightRiskProbability": f"{risk_pct}%",
+        "RiskCategory": risk_cat,
+        "EstimatedFinancialRisk": f"${costs['TotalReplacementCost']:,.2f}",
+        "CostBreakdown": {
+            "RecruitmentCost":   f"${costs['RecruitmentCost']:,.2f}",
+            "TrainingCost":      f"${costs['TrainingCost']:,.2f}",
+            "ProductivityLoss":  f"${costs['ProductivityLoss']:,.2f}",
+            "KnowledgeDrainCost":f"${costs['KnowledgeDrainCost']:,.2f}"
+        },
+        "RetentionPlan": plan
+    }
 
 CHART_TEMPLATE = dict(
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
@@ -422,16 +528,6 @@ def parse_cost(s):
 def risk_color(cat):
     return {"Critical Risk":"#F43F5E","High Risk":"#F59E0B",
             "Medium Risk":"#EAB308","Low Risk":"#10B981"}.get(cat,"#10B981")
-
-def call_api(payload):
-    try:
-        r = requests.post(f"{API_URL}/predict", json=payload, timeout=10)
-        return r.json() if r.status_code==200 else None
-    except: return None
-
-def check_health():
-    try: return requests.get(f"{API_URL}/health", timeout=4).status_code == 200
-    except: return False
 
 def render_hero(title, subtitle, img_key):
     b64 = IMG_BANNERS.get(img_key, "")
@@ -517,12 +613,11 @@ def render_kpi(label, value, sub, icon, color, trend_val="", trend_text="", tren
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════════════════
-api_healthy = check_health()
-
 with st.sidebar:
-    status_cls  = "sidebar-status" if api_healthy else "sidebar-status offline"
-    dot_cls     = "status-dot"     if api_healthy else "status-dot offline"
-    status_text = "API Connected"  if api_healthy else "API Offline"
+    model_ok    = ML_MODEL is not None
+    status_cls  = "sidebar-status"  if model_ok else "sidebar-status offline"
+    dot_cls     = "status-dot"      if model_ok else "status-dot offline"
+    status_text = "Model Loaded"    if model_ok else "Model Not Found"
     st.markdown(f"""
     <div class="sidebar-brand">
         <span class="sidebar-brand-name">{render_svg('brain', 22, '#818CF8')} AttritionIQ</span>
@@ -942,8 +1037,8 @@ elif "Workforce Intelligence" in page:
 elif "Employee Risk Profiler" in page:
     render_hero("Employee Risk Profiler", "Real-time XGBoost flight risk scoring · Personalized retention playbook · Financial impact analysis", "risk")
 
-    if not api_healthy:
-        st.markdown(f'<div class="alert-banner warn">{render_svg("alert-triangle",18,"#FCD34D")} FastAPI backend offline. Start it: <code>source venv/bin/activate && uvicorn app:app --host 127.0.0.1 --port 8000</code></div>', unsafe_allow_html=True)
+    if not model_ok:
+        st.markdown(f'<div class="alert-banner warn">{render_svg("alert-triangle",18,"#FCD34D")} Model artifacts not found in <code>models/</code>. Run <code>python train.py</code> first.</div>', unsafe_allow_html=True)
 
     payload = {
         "Age":age_p,"BusinessTravel":travel_p,"DailyRate":dr_p,"Department":dept_p,
@@ -963,18 +1058,18 @@ elif "Employee Risk Profiler" in page:
     for k in ["profiler_result","profiler_payload"]:
         if k not in st.session_state: st.session_state[k] = None
 
-    if st.session_state.profiler_result is None and api_healthy:
+    if st.session_state.profiler_result is None and model_ok:
         with st.spinner("Running initial risk analysis…"):
-            st.session_state.profiler_result = call_api(payload)
+            st.session_state.profiler_result = local_predict(payload)
             st.session_state.profiler_payload = payload.copy()
 
-    if "analyze_btn" in dir() and analyze_btn and api_healthy:
+    if "analyze_btn" in dir() and analyze_btn and model_ok:
         with st.spinner("Analyzing employee risk profile…"):
-            st.session_state.profiler_result = call_api(payload)
+            st.session_state.profiler_result = local_predict(payload)
             st.session_state.profiler_payload = payload.copy()
-    elif api_healthy and st.session_state.profiler_payload != payload:
+    elif model_ok and st.session_state.profiler_payload != payload:
         with st.spinner("Updating analysis…"):
-            st.session_state.profiler_result = call_api(payload)
+            st.session_state.profiler_result = local_predict(payload)
             st.session_state.profiler_payload = payload.copy()
 
     if st.session_state.profiler_result:
